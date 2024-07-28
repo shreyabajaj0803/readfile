@@ -1,0 +1,95 @@
+   const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [displayName, setdisplayName] = useState("");
+    const navigate = useNavigate();
+
+
+@@ -16,7 +17,8 @@ export const Signup = () => {
+        try {
+            await axios.post("http://localhost:3000/auth/register", {
+                username,
+                password
+                password,
+                displayName
+            });
+            alert("Registration Completed. Now Login!");
+            navigate("/auth");
+@@ -51,6 +53,17 @@ export const Signup = () => {
+                        value={password} 
+                        onChange={(event) => setPassword(event.target.value)}/>
+                    </div>
+
+                    <div className='mb-2'>
+                        <label htmlFor="displayname">Display-name</label>
+                        <input
+                         type="text" 
+                         placeholder='Enter display-name' 
+                         className='form-control' 
+                         id='displayname' 
+                         value={displayName}
+                         onChange={(event) => setdisplayName(event.target.value)}/>
+                    </div>
+
+                    <div className='d-flex justify-content-center mt-2'>
+                        <button 
+  2 changes: 1 addition & 1 deletion2  
+server/src/models/Recipes.js
+Original file line number	Diff line number	Diff line change
+@@ -10,7 +10,7 @@ const RecipeSchema = new mongoose.Schema({
+    instructions: { type: String, required: true },
+    imageUrl: { type: String, required: true },
+    cookingTime: { type: Number, required: true },
+    userOwner: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true }
+    recipeOwner: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true }
+})
+
+export const RecipeModel = mongoose.model("recipes", RecipeSchema);
+  9 changes: 3 additions & 6 deletions9  
+server/src/routes/users.js
+Original file line number	Diff line number	Diff line change
+@@ -12,20 +12,19 @@ const router = express.Router();
+
+// New User register function
+router.post("/register", async(req, res) => {
+    const { username, password } = req.body;
+    const { username, password, displayName } = req.body;
+
+    // Checking if the username already available
+    const user = await UserModel.findOne({username});
+
+    if (user) {
+        return res.json({ message: "User already exists!"});
+    }
+
+    // Decrypting the user password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Adding the new user to the database
+    const newUser = new UserModel({ username, password: hashedPassword});
+    const newUser = new UserModel({ username, password: hashedPassword, displayName});
+    await newUser.save();
+
+    res.json({ message: "User registered sucessfully" });
+@@ -42,21 +41,19 @@ router.post("/login", async (req, res) => {
+    if (!user) {
+        return res.status(404).json({ message: "User doesn't exist!"});
+    }
+
+    //Comparing the becrypted user entered password with the database saved password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if(!isPasswordValid) {
+        return res.status(401).json({ message: "Username or Password is Incorrect"});
+    }
+
+    //Creating a token
+    const token = jwt.sign({ id: user._id }, TOKEN_KEY);
+    res.status(200).json({ token, userID: user._id});
+});
+
+
+// To get display from userId
+// To get display-name from userId
+router.get("/:userID", async (req, res) => {
+    try {
+        const user = await UserModel.findById(req.params.userID).select('displayName');
